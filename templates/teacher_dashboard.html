@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Your Classrooms</h3>
+    <button id="createClassBtn" class="btn btn-main">Create Classroom</button>
+</div>
+
+<!-- create modal -->
+<div class="modal" tabindex="-1" id="createModal">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <h5>Create Classroom</h5>
+      <input id="classNameInput" class="form-control mt-2" placeholder="Enter class name">
+      <div class="mt-3 d-flex justify-content-end">
+        <button id="createClassConfirm" class="btn btn-main">Generate Classroom Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="classList" class="row mt-3"></div>
+
+<script>
+async function fetchClasses(){
+    const res = await fetch('/api/classes/teacher/list');
+    const arr = await res.json();
+    const container = document.getElementById('classList');
+    container.innerHTML = '';
+    if(arr.length===0){
+        container.innerHTML = `<div class="alert alert-info">No classrooms yet</div>`;
+        return;
+    }
+    arr.forEach(c=>{
+        const card = document.createElement('div');
+        card.className = 'col-md-4';
+        card.innerHTML = `
+            <div class="card p-3 mb-3">
+                <h5>${c.class_name}</h5>
+                <p class="text-muted">Code: <strong>${c.code}</strong></p>
+                <p class="text-muted small">Students: ${c.student_count} · Sessions: ${c.sessions}</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="openDetail(${c.id})">Open</button>
+                    <button class="btn btn-main btn-sm" onclick="generateSession(${c.id})">Start Teaching</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function createClass(){
+    const name = document.getElementById('classNameInput').value.trim();
+    if(!name) return alert('Enter a class name');
+    const res = await fetch('/api/classes/create', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({class_name:name})
+    });
+    const j = await res.json();
+    if(res.ok){
+        alert('Class created. Code: ' + j.classroom_code);
+        fetchClasses();
+        document.getElementById('createModal').style.display='none';
+    } else {
+        alert(j.error || 'Error creating class');
+    }
+}
+
+async function generateSession(class_id){
+    const res = await fetch(`/api/classes/teacher/${class_id}/generate_session`, {method:'POST'});
+    const j = await res.json();
+    if(res.ok){
+        // show link
+        const link = j.session_link;
+        prompt('Share this session link with students:', link);
+    } else {
+        alert(j.error || 'Could not create session');
+    }
+}
+
+function openDetail(class_id){
+    window.location.href = '/teacher/classroom/' + class_id; // create route below
+}
+
+document.getElementById('createClassBtn').addEventListener('click', ()=> document.getElementById('createModal').style.display='block');
+document.getElementById('createClassConfirm').addEventListener('click', createClass);
+
+window.onload = fetchClasses;
+</script>
+{% endblock %}

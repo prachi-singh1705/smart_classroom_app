@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-4">
+
+        <div class="card p-4 mt-5">
+            <h3 class="text-center fw-bold mb-3" style="color:#4a5cf8;">Welcome Back 👋</h3>
+            <p class="text-center text-muted">Login to your dashboard</p>
+
+            <form method="POST">
+
+                <label class="fw-semibold mt-2">Email</label>
+                <input type="email" class="form-control" name="email" required>
+
+                <label class="fw-semibold mt-3">Password</label>
+                <input type="password" class="form-control" name="password" required>
+
+                <button class="btn btn-main mt-4 w-100" type="submit">Login</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

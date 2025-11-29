@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div>
+  <a href="/teacher/classes" class="btn btn-link">&larr; Back</a>
+  <h3 id="className"></h3>
+  <p id="classMeta" class="text-muted"></p>
+
+  <h5 class="mt-4">Students</h5>
+  <div id="studentsList"></div>
+
+  <h5 class="mt-4">Sessions</h5>
+  <div id="sessionsList"></div>
+</div>
+
+<script>
+const classId = parseInt(window.location.pathname.split('/').pop());
+async function loadDetail(){
+    const res = await fetch('/api/classes/teacher/' + classId + '/detail');
+    if(!res.ok){ alert('Could not load'); return; }
+    const j = await res.json();
+    const c = j.class;
+    document.getElementById('className').innerText = c.name;
+    document.getElementById('classMeta').innerText = `Code: ${c.code} • Created: ${new Date(c.created_at).toLocaleString()}`;
+
+    const scont = document.getElementById('studentsList');
+    scont.innerHTML = '';
+    if(j.members.length===0) scont.innerHTML = '<div class="text-muted">No students yet</div>';
+    j.members.forEach(m=>{
+        const row = document.createElement('div');
+        row.className = 'p-2';
+        row.innerHTML = `<strong>${m.name}</strong><div class="small text-muted">${m.email} • Joined ${new Date(m.joined_at).toLocaleString()}</div>`;
+        scont.appendChild(row);
+    });
+
+    const sesscont = document.getElementById('sessionsList');
+    sesscont.innerHTML = '';
+    if(j.sessions.length===0) sesscont.innerHTML = '<div class="text-muted">No sessions yet</div>';
+    j.sessions.forEach(s=>{
+        const el = document.createElement('div');
+        el.className='p-2';
+        el.innerHTML = `<div><strong>Session</strong> • ${new Date(s.created_at).toLocaleString()}</div>
+                        <div class="small text-muted">Attendance: ${s.attendance_count}</div>
+                        <div class="mt-1"><a class="btn btn-sm btn-outline-primary" href="${s.link}" target="_blank">Open Link</a></div>`;
+        sesscont.appendChild(el);
+    });
+}
+
+window.onload = loadDetail;
+</script>
+{% endblock %}

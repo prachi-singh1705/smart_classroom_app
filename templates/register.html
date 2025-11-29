@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+
+        <div class="card p-4 mt-4">
+            <h3 class="text-center fw-bold mb-2" style="color:#4a5cf8;">Create your account</h3>
+            <p class="text-center text-muted mb-3">Sign up as Student or Teacher</p>
+
+            <form method="POST">
+                <div class="mb-2">
+                    <label class="form-label">Full name (optional)</label>
+                    <input type="text" class="form-control" name="name" placeholder="e.g. Priya Sharma">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" required>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">I am a</label>
+                    <select name="role" class="form-select">
+                        <option value="student" selected>Student</option>
+                        <option value="teacher">Teacher</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-main mt-2 w-100" type="submit">Register</button>
+
+                <p class="text-center text-muted mt-3 small">
+                    Already have an account? <a href="/login">Login</a>
+                </p>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

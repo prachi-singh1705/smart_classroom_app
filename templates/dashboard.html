@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="fw-bold mb-4">Teacher Dashboard</h3>
+
+<div class="row">
+
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h5 class="fw-bold">Take Attendance</h5>
+            <p class="text-muted">Start face recognition attendance session.</p>
+            <a href="/take_attendance" class="btn btn-main w-100">Start</a>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h5 class="fw-bold">Register Student Face</h5>
+            <p class="text-muted">Add new student and capture their face.</p>
+            <a href="/register_face" class="btn btn-main w-100">Register</a>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h5 class="fw-bold">Reports</h5>
+            <p class="text-muted">View daily & monthly attendance reports.</p>
+            <a href="/reports" class="btn btn-main w-100">View</a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

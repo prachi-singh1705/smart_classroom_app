@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Student Dashboard</h3>
+    <div class="text-muted">Welcome, <strong>{{ current_user.name or current_user.email }}</strong></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h5 class="fw-bold">My Attendance</h5>
+            <p class="text-muted">View your attendance history and download reports.</p>
+            <a href="/reports" class="btn btn-main w-100">View</a>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h5 class="fw-bold">My Profile</h5>
+            <p class="text-muted">Update profile or view registered face (when available).</p>
+            <a href="/profile" class="btn btn-main w-100">Profile</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
