@@ -1,11 +1,152 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>Live Session</h3>
-<p class="text-muted">Session for class: <strong>{{ session.classroom.class_name }}</strong></p>
-<p>Session ID: {{ session.id }} • Created: {{ session.created_at }}</p>
 
-<div class="card p-4 mt-3">
-    <p>This is the live session page. Implement real-time attendance / video here.</p>
-    <p class="text-muted">Students that open this page will be marked present automatically.</p>
+<div class="container-fluid mt-3">
+
+  <!-- ================= HEADER ================= -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <h5 class="mb-0">Live Session • {{ classroom.subject }}</h5>
+      <span class="badge bg-success">LIVE</span>
+      <span class="ms-2" id="sessionTimer">00:00</span>
+    </div>
+
+    {% if current_user.role == "teacher" %}
+      <button class="btn btn-danger btn-sm" id="endSessionBtn">
+        End Session
+      </button>
+    {% endif %}
+  </div>
+
+  <!-- ================= TOOLBAR ================= -->
+  <div class="whiteboard-toolbar">
+
+    <!-- Pen Controls -->
+    <input type="color" id="penColor" value="#1faa00">
+    <input type="range" id="penSize" min="1" max="15" value="4">
+
+    <button id="penBtn" class="btn btn-sm btn-success">Pen</button>
+    <button id="eraserBtn" class="btn btn-sm btn-secondary">Eraser</button>
+
+    <!-- Shapes -->
+    <div class="shapes-wrapper">
+      <button id="shapesToggle" class="btn btn-sm btn-outline-primary">
+        Shapes ▾
+      </button>
+
+      <div id="shapesMenu" class="shapes-menu hidden">
+        <button data-shape="line">Line</button>
+        <button data-shape="rect">Rectangle</button>
+        <button data-shape="circle">Circle</button>
+      </div>
+    </div>
+
+    <button id="clearBtn" class="btn btn-sm btn-danger">Clear</button>
+  </div>
+
+  <!-- ================= SLIDE CONTROLS ================= -->
+  <div class="d-flex gap-2 mb-2 align-items-center">
+
+    <input
+      type="file"
+      id="slideUpload"
+      accept=".pdf,.png,.jpg,.jpeg,.ppt,.pptx"
+      hidden
+    >
+
+    <button
+      class="btn btn-sm btn-primary"
+      onclick="document.getElementById('slideUpload').click()"
+    >
+      Upload Slides
+    </button>
+
+    <button class="btn btn-sm btn-secondary" id="prevSlideBtn">◀ Prev</button>
+    <button class="btn btn-sm btn-secondary" id="nextSlideBtn">Next ▶</button>
+
+    <button class="btn btn-sm btn-success" id="blankSlideBtn">
+      + Blank Slide
+    </button>
+
+    <span class="ms-2 small text-muted">
+      Slide <span id="slideIndex">0</span>/<span id="slideTotal">0</span>
+    </span>
+  </div>
+
+  <!-- ================= WHITEBOARD ================= -->
+  <div class="whiteboard-container">
+    <canvas id="whiteboard"></canvas>
+  </div>
+
 </div>
+
+<!-- ================= STYLES ================= -->
+<style>
+.whiteboard-container {
+  background: #cfeecb;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 12px rgba(0,0,0,0.2),
+    0 10px 25px rgba(0,0,0,0.15);
+  padding: 10px;
+}
+
+#whiteboard {
+  width: 100%;
+  height: 520px;
+  background: #cfeecb;
+  border-radius: 10px;
+  cursor: crosshair;
+}
+
+.whiteboard-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.shapes-wrapper {
+  position: relative;
+}
+
+.shapes-menu {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1000;
+}
+
+.shapes-menu button {
+  border: none;
+  background: #f2f2f2;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.shapes-menu button:hover {
+  background: #d7f5d3;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+
+<!-- ================= SCRIPTS ================= -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="/static/js/whiteboard.js"></script>
+
 {% endblock %}

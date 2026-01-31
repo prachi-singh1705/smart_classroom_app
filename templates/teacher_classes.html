@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="fw-bold">Your Classrooms</h3>
+  <div>
+    <button class="btn btn-main" onclick="openCreateModal()">Create Classroom</button>
+    <a class="btn btn-outline-secondary" href="/teacher/dashboard">Back</a>
+  </div>
+</div>
+
+<div id="classesGrid" class="row g-3"></div>
+
+<!-- Reuse create modal from dashboard -->
+{% include 'teacher_dashboard.html' %}  {# This ensures modal exists; if include causes duplication, keep create modal here too #}
+
+<script>
+async function loadClasses(){
+  const res = await fetch('/api/classes/teacher/list');
+  const arr = await res.json();
+  const grid = document.getElementById('classesGrid');
+  grid.innerHTML = '';
+  if(!Array.isArray(arr) || arr.length===0){
+    grid.innerHTML = '<div class="alert alert-info">No classrooms yet. Create one.</div>';
+    return;
+  }
+  arr.forEach(c=>{
+    const col = document.createElement('div'); col.className='col-md-4';
+    col.innerHTML = `
+      <div class="class-card p-3">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h5 class="mb-1">${c.class_name}</h5>
+            <div class="small text-muted">${c.subject || ''}</div>
+            <div class="mt-2"><span class="pill">Code: ${c.code}</span></div>
+          </div>
+          <div class="text-end">
+            <div class="small text-muted">Students</div>
+            <div style="font-weight:700;font-size:18px">${c.student_count}</div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-outline-primary btn-sm" onclick="openDetail(${c.id})">Open</button>
+          <button class="btn btn-main btn-sm" onclick="generateSession(${c.id})">Start Teaching</button>
+        </div>
+        <div class="small text-muted mt-2">Created: ${new Date(c.created_at).toLocaleDateString()}</div>
+      </div>
+    `;
+    grid.appendChild(col);
+  });
+}
+
+function openDetail(id){
+  window.location.href = `/teacher/classroom/${id}`;
+}
+
+async function generateSession(class_id){
+  if(!confirm('Generate session link for this class?')) return;
+  const res = await fetch(`/api/classes/teacher/${class_id}/generate_session`, {method:'POST'});
+  const j = await res.json();
+  if(res.ok){
+    await navigator.clipboard.writeText(j.session_link);
+
+alert(
+  "Session link copied to clipboard:\n\n" +
+  j.session_link +
+  "\n\nPaste it anywhere to invite students."
+);
+
+  } else {
+    alert(j.error || 'Could not create session');
+  }
+}
+
+window.onload = loadClasses;
+</script>
+{% endblock %}

@@ -1,27 +1,130 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold">Student Dashboard</h3>
-    <div class="text-muted">Welcome, <strong>{{ current_user.name or current_user.email }}</strong></div>
+<style>
+/* Glass card style */
+.glass-card {
+    backdrop-filter: blur(14px);
+    background: rgba(255,255,255,0.45);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.teacher-photo {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #ddd;
+    margin-right: 14px;
+}
+
+.teacher-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge-subject {
+    background: #4a5cf8;
+    color: white;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 30px;
+}
+
+.top-action-btn {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 500;
+}
+
+.header-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #30336b;
+}
+
+.fade-in {
+    animation: fade-in .5s ease forwards;
+}
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+    <h3 class="header-title">👋 Welcome Back, {{ current_user.name or current_user.email }}</h3>
+
+    <div>
+        <a class="btn btn-outline-primary top-action-btn" href="/join-class">Join Class</a>
+        <a class="btn btn-main top-action-btn" href="/join-session">Join Session</a>
+        <a class="btn btn-light top-action-btn" href="/timetable">Weekly Timetable</a>
+        <a class="btn btn-main top-action-btn" href="/assignments">Assignments</a>
+    </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card p-4">
-            <h5 class="fw-bold">My Attendance</h5>
-            <p class="text-muted">View your attendance history and download reports.</p>
-            <a href="/reports" class="btn btn-main w-100">View</a>
-        </div>
-    </div>
+<h4 class="fw-bold mb-3 fade-in">Your Classes</h4>
 
-    <div class="col-md-6">
-        <div class="card p-4">
-            <h5 class="fw-bold">My Profile</h5>
-            <p class="text-muted">Update profile or view registered face (when available).</p>
-            <a href="/profile" class="btn btn-main w-100">Profile</a>
-        </div>
-    </div>
-</div>
+<div id="joinedClasses" class="row fade-in"></div>
+
+
+<script>
+async function loadJoined(){
+    const res = await fetch('/api/classes/student/joined');
+    const arr = await res.json();
+    const container = document.getElementById('joinedClasses');
+    container.innerHTML = '';
+
+    if(arr.length === 0){
+        container.innerHTML = `
+            <div class="alert alert-info">You haven’t joined any classes yet. Click “Join Class”.</div>
+        `;
+        return;
+    }
+
+    arr.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'col-md-4 col-sm-6 mb-4';
+
+        el.innerHTML = `
+            <div class="glass-card p-3">
+                <div class="d-flex align-items-center">
+                    <div class="teacher-photo">
+                        ${c.teacher_photo
+                            ? `<img src="${c.teacher_photo}">`
+                            : `<div class="d-flex align-items-center justify-content-center h-100 w-100" style="font-size:20px;font-weight:600;">
+                                  ${c.teacher_name.charAt(0).toUpperCase()}
+                               </div>`}
+                    </div>
+                    <div style="flex:1;">
+                        <h5 class="mb-1 fw-bold">${c.class_name}</h5>
+                        <span class="badge-subject">${c.subject || "General"}</span>
+                        <div class="small text-muted mt-1">Teacher: ${c.teacher_name}</div>
+                        <div class="small text-muted">Code: ${c.code}</div>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <a href="/student/class/${c.class_id}" class="btn btn-main w-100">Open Class</a>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(el);
+    });
+}
+
+window.onload = loadJoined;
+</script>
 
 {% endblock %}

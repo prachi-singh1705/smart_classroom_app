@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="mb-3">Weekly Timetable</h3>
+
+<table class="table table-bordered text-center">
+  <thead>
+    <tr>
+      <th>Day</th>
+      {% for i in range(1,9) %}
+      <th>
+        <div>Period {{ i }}</div>
+        <div class="period-time" id="period-time-{{ i }}"></div>
+      </th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<script>
+fetch('/api/timetable/student/grid')
+.then(r => r.json())
+.then(data => {
+
+  const grid = data.grid;
+  const periodTimes = data.period_times;
+
+  // 🔹 Fill period timings in header (dynamic)
+  Object.keys(periodTimes).forEach(p => {
+    const el = document.getElementById(`period-time-${p}`);
+    if (el) el.innerText = periodTimes[p];
+  });
+
+  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const tbody = document.getElementById("tableBody");
+
+  tbody.innerHTML = days.map(day => {
+    let row = `<tr><th>${day}</th>`;
+    for (let p = 1; p <= 8; p++) {
+      const s = grid[day][p];
+      row += s.subject
+        ? `<td>
+            <strong>${s.teacher}</strong><br>
+            <span class="text-muted">${s.subject}</span>
+          </td>`
+        : `<td class="text-muted">--</td>`;
+    }
+    return row + "</tr>";
+  }).join('');
+});
+</script>
+
+<style>
+.period-time {
+  font-size: 11px;
+  color: #00000f;
+  font-weight: 1000;
+}
+</style>
+<style>
+/* ---------- TABLE LAYOUT ---------- */
+table {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+thead th {
+  background: linear-gradient(135deg, #ce5a5a, #ce5a5a);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+thead th .period-time {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* ---------- DAY COLUMN ---------- */
+tbody th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #34363a;
+  width: 110px;
+}
+
+/* ---------- PERIOD CELLS ---------- */
+tbody td {
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  padding: 10px;
+}
+
+tbody td:hover {
+  background: #eef2ff;
+  transform: scale(1.02);
+}
+
+/* ---------- SUBJECT BLOCK ---------- */
+td strong {
+  display: block;
+  font-size: 14px;
+  color: #ce5a5a;
+}
+
+td span {
+  font-size: 12px;
+  color: #05080c;
+}
+
+/* ---------- EMPTY CELLS ---------- */
+.text-muted {
+  color: #080808 !important;
+  font-weight: 500;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 900px) {
+  table {
+    font-size: 12px;
+  }
+}
+</style>
+
+
+{% endblock %}

@@ -1,155 +1,140 @@
-from flask import Blueprint, request, jsonify, current_app, url_for, redirect, render_template
-from utils.auth_utils import teacher_required, student_required
-from utils.auth_utils import db, User
-from models.classroom_models import Classroom, ClassMember, Session, SessionAttendance
+# api/classes_api.py
+from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
+from utils.auth_utils import teacher_required, student_required, db
+
+from models.classroom_models import (
+    Classroom,
+    ClassMember,
+    TimetableEntry,
+    LiveSession,          # ✅ use ONLY LiveSession
+    SessionAttendance     # ✅ attendance for LiveSession
+)
+
 import secrets
 import string
-from datetime import datetime
 
 classes_api = Blueprint("classes_api", __name__)
 
+# -------------------------
+# HELPERS
+# -------------------------
 def generate_class_code(length=6):
     alphabet = string.ascii_uppercase + string.digits
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
-def generate_session_token(length=9):
-    alphabet = string.ascii_lowercase + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+def generate_session_token():
+    return secrets.token_urlsafe(6)
 
-# ---------- Teacher: create class ----------
-@classes_api.route("/create", methods=["POST"])
+# -------------------------
+# CREATE CLASS (TEACHER)
+# -------------------------
+@classes_api.post("/create")
 @teacher_required
 def create_class():
     data = request.get_json() or {}
     class_name = data.get("class_name", "").strip()
+    subject = data.get("subject", "").strip()
+
     if not class_name:
-        return jsonify({"error":"class_name required"}), 400
+        return {"error": "class_name required"}, 400
 
-    # generate unique code
-    for _ in range(10):
-        code = generate_class_code(6)
-        if not Classroom.query.filter_by(classroom_code=code).first():
-            break
+    code = generate_class_code()
+    classroom = Classroom(
+        teacher_id=current_user.id,
+        class_name=class_name,
+        subject=subject,
+        classroom_code=code
+    )
 
-    c = Classroom(teacher_id=current_user.id, class_name=class_name, classroom_code=code)
-    db.session.add(c)
+    db.session.add(classroom)
     db.session.commit()
-    return jsonify({
-        "message":"created",
-        "class_id": c.id,
-        "class_name": c.class_name,
-        "classroom_code": c.classroom_code,
-        "created_at": c.created_at.isoformat()
-    }), 201
 
-# ---------- Student: join class by code ----------
-@classes_api.route("/join-class", methods=["POST"])
+    return {
+        "message": "created",
+        "class_id": classroom.id,
+        "classroom_code": classroom.classroom_code
+    }, 201
+
+# -------------------------
+# STUDENT JOIN CLASS
+# -------------------------
+@classes_api.post("/join-class")
 @login_required
 def join_class():
-    data = request.get_json() or {}
-    classroom_code = (data.get("classroom_code") or "").strip().upper()
-    if not classroom_code:
-        return jsonify({"error":"classroom_code required"}), 400
+    code = (request.json or {}).get("classroom_code", "").upper()
+    classroom = Classroom.query.filter_by(classroom_code=code).first()
 
-    classroom = Classroom.query.filter_by(classroom_code=classroom_code).first()
     if not classroom:
-        return jsonify({"error":"invalid code"}), 404
+        return {"error": "Invalid code"}, 404
 
-    # prevent duplicate membership
-    existing = ClassMember.query.filter_by(class_id=classroom.id, student_id=current_user.id).first()
-    if existing:
-        return jsonify({"message":"already joined", "class_id": classroom.id})
+    exists = ClassMember.query.filter_by(
+        class_id=classroom.id,
+        student_id=current_user.id
+    ).first()
 
-    member = ClassMember(class_id=classroom.id, student_id=current_user.id)
+    if exists:
+        return {"message": "already joined"}
+
+    member = ClassMember(
+        class_id=classroom.id,
+        student_id=current_user.id
+    )
     db.session.add(member)
     db.session.commit()
-    return jsonify({"message":"joined", "class_id":classroom.id, "joined_at": member.joined_at.isoformat()})
 
-# ---------- Teacher: list their classrooms ----------
-@classes_api.route("/teacher/list", methods=["GET"])
+    return {"message": "joined", "class_id": classroom.id}
+
+# -------------------------
+# TEACHER CLASS LIST
+# -------------------------
+@classes_api.get("/teacher/list")
 @teacher_required
-def teacher_list():
-    classes = Classroom.query.filter_by(teacher_id=current_user.id).order_by(Classroom.created_at.desc()).all()
-    out = []
-    for c in classes:
-        out.append({
+def teacher_classes():
+    classes = Classroom.query.filter_by(
+        teacher_id=current_user.id
+    ).all()
+
+    return [
+        {
             "id": c.id,
             "class_name": c.class_name,
+            "subject": c.subject,
             "code": c.classroom_code,
-            "created_at": c.created_at.isoformat(),
-            "student_count": c.members.count(),
-            "sessions": c.sessions.count()
-        })
-    return jsonify(out)
+            "student_count": c.members.count()
+        }
+        for c in classes
+    ]
 
-# ---------- Teacher: classroom detail ----------
-@classes_api.route("/teacher/<int:class_id>/detail", methods=["GET"])
+# -------------------------
+# GENERATE LIVE SESSION (PHASE-1)
+# -------------------------
+@classes_api.post("/teacher/<int:class_id>/generate_session")
 @teacher_required
-def classroom_detail(class_id):
-    classroom = Classroom.query.filter_by(id=class_id, teacher_id=current_user.id).first_or_404()
-    members = [{
-        "id": m.student.id,
-        "name": m.student.name or m.student.email,
-        "email": m.student.email,
-        "joined_at": m.joined_at.isoformat()
-    } for m in classroom.members.order_by(ClassMember.joined_at.desc()).all()]
+def generate_live_session(class_id):
+    classroom = Classroom.query.filter_by(
+        id=class_id,
+        teacher_id=current_user.id
+    ).first_or_404()
 
-    sessions = [{
-        "id": s.id,
-        "link": s.session_link,
-        "created_at": s.created_at.isoformat(),
-        "attendance_count": s.attendances.count()
-    } for s in classroom.sessions.order_by(Session.created_at.desc()).all()]
+    token = generate_session_token()
 
-    return jsonify({
-        "class": {
-            "id": classroom.id,
-            "name": classroom.class_name,
-            "code": classroom.classroom_code,
-            "created_at": classroom.created_at.isoformat()
-        },
-        "members": members,
-        "sessions": sessions
-    })
+    session = LiveSession(
+        class_id=classroom.id,
+        teacher_id=current_user.id,
+        session_link=token
+    )
 
-# ---------- Teacher: generate session link ----------
-@classes_api.route("/teacher/<int:class_id>/generate_session", methods=["POST"])
-@teacher_required
-def generate_session(class_id):
-    classroom = Classroom.query.filter_by(id=class_id, teacher_id=current_user.id).first_or_404()
-    # generate unique session token
-    for _ in range(10):
-        token = generate_session_token(9)
-        link = token
-        if not Session.query.filter_by(session_link=link).first():
-            break
-
-    s = Session(class_id=class_id, teacher_id=current_user.id, session_link=link)
-    db.session.add(s)
+    db.session.add(session)
     db.session.commit()
 
-    # build full URL (if your domain set later, update accordingly)
-    full_url = request.host_url.rstrip("/") + "/session/" + s.session_link
-    return jsonify({
-        "message":"session_created",
-        "session_id": s.id,
-        "session_link": full_url,
-        "created_at": s.created_at.isoformat()
-    }), 201
+    # ✅ FULL ABSOLUTE URL (THIS IS THE FIX)
+    full_url = f"{request.scheme}://{request.host}/session/{token}"
 
-# ---------- Student: join by session link ----------
-@classes_api.route("/session/<string:session_link>", methods=["GET", "POST"])
-@login_required
-def session_join(session_link):
-    s = Session.query.filter_by(session_link=session_link).first_or_404()
-    # if student, save attendance
-    if current_user.is_authenticated:
-        # prevent duplicate attendance
-        exists = SessionAttendance.query.filter_by(session_id=s.id, student_id=current_user.id).first()
-        if not exists:
-            att = SessionAttendance(session_id=s.id, student_id=current_user.id)
-            db.session.add(att)
-            db.session.commit()
-    # Redirect to a live class placeholder page (implement UI later)
-    return render_template("live_session.html", session=s)
+    return {
+        "message": "Live session created",
+        "session_id": session.id,
+        "session_token": token,
+        "session_link": full_url
+    }, 201
+

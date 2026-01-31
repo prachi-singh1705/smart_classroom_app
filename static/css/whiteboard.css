@@ -1,0 +1,30 @@
+.whiteboard-container {
+  border: 1px solid #0b3318;
+  border-radius: 6px;
+  background: #0b3318;
+}
+
+.whiteboard-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.whiteboard-toolbar button {
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}
+
+.whiteboard-toolbar button:hover {
+  background: #e9ecef;
+}
+
+#whiteboardCanvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+}

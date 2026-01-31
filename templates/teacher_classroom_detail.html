@@ -1,50 +1,149 @@
 {% extends "base.html" %}
 {% block content %}
-<div>
-  <a href="/teacher/classes" class="btn btn-link">&larr; Back</a>
-  <h3 id="className"></h3>
-  <p id="classMeta" class="text-muted"></p>
 
-  <h5 class="mt-4">Students</h5>
-  <div id="studentsList"></div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a class="btn btn-link" href="/teacher/classes">&larr; Back</a>
+    <h3 id="className">Class</h3>
+    <div id="classMeta" class="small text-muted"></div>
+  </div>
+  <div>
+    <button class="btn btn-outline-primary" id="studentsBtn">Students</button>
+    <button class="btn btn-outline-secondary" id="attendanceBtn">Attendance</button>
+    <button class="btn btn-main" id="assignBtn">Assign Task</button>
+    <button class="btn btn-light" id="timetableBtn">Time Table</button>
+  </div>
+</div>
 
-  <h5 class="mt-4">Sessions</h5>
-  <div id="sessionsList"></div>
+<div id="panelArea">
+
+  <!-- Students -->
+  <div id="studentsPanel" class="panel" style="display:none;">
+    <h5>Students</h5>
+    <div id="studentsList"></div>
+  </div>
+
+  <!-- Attendance -->
+  <div id="attendancePanel" class="panel" style="display:none;">
+    <h5>Sessions</h5>
+    <div id="sessionsList"></div>
+  </div>
+
+  <!-- Assignment -->
+  <div id="assignPanel" class="panel" style="display:none;">
+    <h5>Create Assignment</h5>
+    <form id="assignForm">
+      <input name="title" class="form-control mb-2" placeholder="Title" required>
+      <textarea name="description" class="form-control mb-2"></textarea>
+      <input type="date" name="due_date" class="form-control mb-2">
+      <button class="btn btn-main">Create</button>
+    </form>
+    <div id="assignResult"></div>
+  </div>
+
+  <!-- Timetable -->
+  <div id="timetablePanel" class="panel" style="display:none;">
+    <h5>Timetable</h5>
+
+    <div class="d-flex gap-2 mb-3">
+      <select id="ttDay" class="form-select">
+        <option value="">Day</option>
+        <option>Monday</option><option>Tuesday</option>
+        <option>Wednesday</option><option>Thursday</option>
+        <option>Friday</option><option>Saturday</option>
+      </select>
+
+      <select id="ttPeriod" class="form-select">
+        <option value="">Period</option>
+        {% for i in range(1,9) %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="time" id="ttStart" class="form-control">
+      <input type="time" id="ttEnd" class="form-control">
+
+      <button type="button" class="btn btn-main" id="addTtBtn">Add</button>
+    </div>
+
+    <table class="table table-sm">
+      <thead>
+        <tr><th>Day</th><th>Period</th><th>Time</th><th></th></tr>
+      </thead>
+      <tbody id="ttTableBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const classId = parseInt(window.location.pathname.split('/').pop());
-async function loadDetail(){
-    const res = await fetch('/api/classes/teacher/' + classId + '/detail');
-    if(!res.ok){ alert('Could not load'); return; }
-    const j = await res.json();
-    const c = j.class;
-    document.getElementById('className').innerText = c.name;
-    document.getElementById('classMeta').innerText = `Code: ${c.code} • Created: ${new Date(c.created_at).toLocaleString()}`;
+const classId = parseInt(location.pathname.split('/').pop());
 
-    const scont = document.getElementById('studentsList');
-    scont.innerHTML = '';
-    if(j.members.length===0) scont.innerHTML = '<div class="text-muted">No students yet</div>';
-    j.members.forEach(m=>{
-        const row = document.createElement('div');
-        row.className = 'p-2';
-        row.innerHTML = `<strong>${m.name}</strong><div class="small text-muted">${m.email} • Joined ${new Date(m.joined_at).toLocaleString()}</div>`;
-        scont.appendChild(row);
-    });
-
-    const sesscont = document.getElementById('sessionsList');
-    sesscont.innerHTML = '';
-    if(j.sessions.length===0) sesscont.innerHTML = '<div class="text-muted">No sessions yet</div>';
-    j.sessions.forEach(s=>{
-        const el = document.createElement('div');
-        el.className='p-2';
-        el.innerHTML = `<div><strong>Session</strong> • ${new Date(s.created_at).toLocaleString()}</div>
-                        <div class="small text-muted">Attendance: ${s.attendance_count}</div>
-                        <div class="mt-1"><a class="btn btn-sm btn-outline-primary" href="${s.link}" target="_blank">Open Link</a></div>`;
-        sesscont.appendChild(el);
-    });
+function closePanels(){
+  document.querySelectorAll('.panel').forEach(p=>p.style.display='none');
 }
 
-window.onload = loadDetail;
+studentsBtn.onclick = ()=>{ closePanels(); studentsPanel.style.display='block'; };
+attendanceBtn.onclick = ()=>{ closePanels(); attendancePanel.style.display='block'; };
+assignBtn.onclick = ()=>{ closePanels(); assignPanel.style.display='block'; };
+timetableBtn.onclick = ()=>{ closePanels(); timetablePanel.style.display='block'; loadTimetable(); };
+
+async function loadMeta(){
+  const r = await fetch(`/api/classes/teacher/${classId}/detail`);
+  const j = await r.json();
+  className.innerText = j.class.name;
+  classMeta.innerText = `Code: ${j.class.code}`;
+}
+loadMeta();
+
+/* ADD TIMETABLE */
+addTtBtn.onclick = async () => {
+  const payload = {
+    class_id: classId,
+    day: ttDay.value,
+    period: ttPeriod.value,
+    start_time: ttStart.value,
+    end_time: ttEnd.value
+  };
+
+  if (Object.values(payload).some(v=>!v)) {
+    alert("Fill all fields");
+    return;
+  }
+
+  const res = await fetch("/api/timetable/teacher/timetable/add", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  if(!res.ok) return alert(data.error);
+
+  loadTimetable();
+};
+
+/* LOAD TIMETABLE */
+async function loadTimetable(){
+  const r = await fetch(`/api/timetable/teacher/timetable/${classId}`);
+  const arr = await r.json();
+
+  ttTableBody.innerHTML = arr.map(e=>`
+    <tr>
+      <td>${e.day}</td>
+      <td>${e.period}</td>
+      <td>${e.start_time} - ${e.end_time}</td>
+      <td>
+        <button class="btn btn-danger btn-sm"
+          onclick="deleteEntry(${e.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function deleteEntry(id){
+  await fetch(`/api/timetable/teacher/timetable/${id}`, {method:"DELETE"});
+  loadTimetable();
+}
 </script>
+
 {% endblock %}

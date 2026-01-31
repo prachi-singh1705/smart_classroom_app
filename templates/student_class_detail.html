@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 id="classTitle">Class</h3>
+<div id="classMeta" class="text-muted mb-3"></div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h5>Students</h5>
+    <div id="studentsList"></div>
+  </div>
+
+  <div class="col-md-6">
+    <h5>My Previous Attendance</h5>
+    <div id="attendanceList"></div>
+  </div>
+</div>
+
+<script>
+const classId = {{ class_id }};
+async function loadDetail(){
+    const res = await fetch('/api/classes/teacher/' + classId + '/detail');
+    if(!res.ok) { document.getElementById('classTitle').innerText='Error loading'; return; }
+    const data = await res.json();
+    const c = data.class;
+    document.getElementById('classTitle').innerText = c.name;
+    document.getElementById('classMeta').innerText = `Code: ${c.code} • Created: ${new Date(c.created_at).toLocaleString()}`;
+
+    const scont = document.getElementById('studentsList');
+    scont.innerHTML='';
+    data.members.forEach(m=>{
+        scont.innerHTML += `<div class="p-2"><strong>${m.name}</strong><div class="small text-muted">${m.joined_at}</div></div>`;
+    });
+
+    // load student attendance for sessions
+    const sessRes = await fetch('/api/classes/teacher/' + classId + '/detail');
+    const sessData = await sessRes.json();
+    const sessions = sessData.sessions || [];
+    const acont = document.getElementById('attendanceList');
+    acont.innerHTML = '';
+    for(const s of sessions){
+        // fetch attendance via separate endpoint? For simplicity, we show presence by calling session attendance API
+        const attRes = await fetch('/api/classes/session/' + s.id + '/attendance'); // we'll add this endpoint below
+        let isPresent = false;
+        if(attRes.ok){
+            const arr = await attRes.json();
+            isPresent = arr.find(a=>a.student_id == {{ current_user.id }}) ? true : false;
+        }
+        acont.innerHTML += `<div class="p-2 border-bottom"><strong>${new Date(s.created_at).toLocaleDateString()}</strong><div class="small">${isPresent ? '<span class="text-success">Present</span>' : '<span class="text-danger">Absent</span>'} • <a href="${s.link}" target="_blank">Open Session</a></div></div>`;
+    }
+}
+window.onload = loadDetail;
+</script>
+{% endblock %}
