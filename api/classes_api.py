@@ -138,3 +138,39 @@ def generate_live_session(class_id):
         "session_link": full_url
     }, 201
 
+
+# -------------------------
+# STUDENT JOINED CLASSES
+# -------------------------
+@classes_api.get("/student/joined")
+@student_required
+def student_joined_classes():
+
+    memberships = ClassMember.query.filter_by(
+        student_id=current_user.id
+    ).all()
+
+    if not memberships:
+        return []
+
+    class_ids = [m.class_id for m in memberships]
+
+    classes = Classroom.query.filter(
+        Classroom.id.in_(class_ids)
+    ).all()
+
+    result = []
+
+    for c in classes:
+        teacher = c.teacher  # requires relationship in model
+
+        result.append({
+            "class_id": c.id,
+            "class_name": c.class_name,
+            "subject": c.subject,
+            "code": c.classroom_code,
+            "teacher_name": teacher.name if teacher else "Unknown",
+            "teacher_photo": teacher.photo_url if teacher else None
+        })
+
+    return result
