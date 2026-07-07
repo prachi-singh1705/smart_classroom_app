@@ -155,29 +155,6 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Open browser:
-
-```
-http://127.0.0.1:5000
-```
-
----
-
-## 📸 Screenshots
-
-> Add screenshots of:
-
-- Login Page
-- Teacher Dashboard
-- Student Dashboard
-- Classroom
-- Attendance Module
-- Assignment Page
-- Timetable
-- Face Detection
-
----
-
 ## 🎯 Future Enhancements
 
 - Video Conference Integration
