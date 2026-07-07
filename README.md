@@ -214,18 +214,3 @@ Artificial Intelligence & Data Science Student
 
 GitHub:
 https://github.com/prachi-singh1705
-
----
-
-## 📄 License
-
-This project is developed for educational and learning purposes.
-
-Feel free to use and improve it with proper attribution.
-
----
-
-## ⭐ Support
-
-If you found this project helpful, please consider giving it a ⭐ on GitHub.
-It motivates further development and improvements.
